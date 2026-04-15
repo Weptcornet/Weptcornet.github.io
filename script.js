@@ -413,26 +413,72 @@ if (about3DScene) {
 }
 
 // ============================================================
-// CONTACT FORM SUBMIT
+// SUPABASE CLIENT
+// ============================================================
+const SUPABASE_URL = 'https://uofpbirykbwwhscjyqrw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvZnBiaXJ5a2J3d2hzY2p5cXJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyMzUwMzEsImV4cCI6MjA5MTgxMTAzMX0.nNLBth4Tr-O9i3lq1epDYunuuq1Jj6VmV_wRrvcGvBs';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ============================================================
+// CONTACT FORM → SUPABASE INSERT
 // ============================================================
 const contactForm = $('#contactForm');
 const formSuccess = $('#formSuccess');
 
 if (contactForm) {
-  contactForm.addEventListener('submit', e => {
+  contactForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const btn = $('#formSubmitBtn');
-    btn.disabled = true;
-    btn.querySelector('span').textContent = 'Sending...';
 
-    // Simulate send (replace with actual API call e.g. EmailJS / Formspree)
-    setTimeout(() => {
+    const btn      = $('#formSubmitBtn');
+    const btnLabel = btn.querySelector('span');
+
+    // Read values
+    const name    = $('#contactName').value.trim();
+    const email   = $('#contactEmail').value.trim();
+    const subject = $('#contactSubject').value.trim() || '(no subject)';
+    const message = $('#contactMessage').value.trim();
+
+    // Basic validation
+    if (!name || !email || !message) {
+      btnLabel.textContent = 'Please fill all fields';
+      setTimeout(() => { btnLabel.textContent = 'Send Message'; }, 2500);
+      return;
+    }
+
+    // Loading state
+    btn.disabled  = true;
+    btn.style.opacity = '0.7';
+    btnLabel.textContent = 'Sending…';
+
+    try {
+      const { error } = await supabase
+        .from('contact_messages')
+        .insert([{ name, email, subject, message }]);
+
+      if (error) throw error;
+
+      // Success
       contactForm.reset();
       formSuccess.style.display = 'block';
-      btn.disabled = false;
-      btn.querySelector('span').textContent = 'Send Message';
-      setTimeout(() => { formSuccess.style.display = 'none'; }, 5000);
-    }, 1500);
+      formSuccess.textContent   = '✅ Message received! I\'ll reply soon.';
+      formSuccess.style.background   = 'rgba(34,197,94,0.1)';
+      formSuccess.style.borderColor  = 'rgba(34,197,94,0.3)';
+      formSuccess.style.color        = '#86efac';
+      setTimeout(() => { formSuccess.style.display = 'none'; }, 6000);
+
+    } catch (err) {
+      console.error('Supabase error:', err);
+      formSuccess.style.display = 'block';
+      formSuccess.textContent   = '❌ Failed to send. Please email me directly at sifanajmal@gmail.com';
+      formSuccess.style.background  = 'rgba(239,68,68,0.1)';
+      formSuccess.style.borderColor = 'rgba(239,68,68,0.3)';
+      formSuccess.style.color       = '#fca5a5';
+      setTimeout(() => { formSuccess.style.display = 'none'; }, 8000);
+    } finally {
+      btn.disabled      = false;
+      btn.style.opacity = '1';
+      btnLabel.textContent = 'Send Message';
+    }
   });
 }
 
